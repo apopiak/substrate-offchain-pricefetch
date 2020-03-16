@@ -64,6 +64,20 @@ pub const FETCHED_CRYPTOS: [(&[u8], &[u8], &[u8]); 6] = [
     b"https://min-api.cryptocompare.com/data/price?fsym=DAI&tsyms=USD"),
 ];
 
+pub trait FetchPriceFor {
+  fn get_price_for(symbol: &[u8]) -> Option<u64>;
+}
+
+impl<T: Trait> FetchPriceFor for Module<T> {
+  fn get_price_for(symbol: &[u8]) -> Option<u64> {
+    let (_, price) = <TokenAggPPMap<T>>::get(symbol);
+    if price == Default::default() {
+      return None;
+    }
+    price.into()
+  }
+}
+
 /// The module's configuration trait.
 pub trait Trait: timestamp::Trait + system::Trait {
   /// The overarching event type.
@@ -204,14 +218,6 @@ decl_module! {
 }
 
 impl<T: Trait> Module<T> {
-  pub fn get_price_for(symbol: &[u8]) -> Option<u64> {
-    let (_, price) = <TokenAggPPMap<T>>::get(symbol);
-    if price == Default::default() {
-      return None;
-    }
-    price.into()
-  }
-
   fn fetch_json<'a>(remote_url: &'a [u8]) -> Result<JsonValue> {
     let remote_url_str = core::str::from_utf8(remote_url)
       .map_err(|_| "Error in converting remote_url to string")?;
