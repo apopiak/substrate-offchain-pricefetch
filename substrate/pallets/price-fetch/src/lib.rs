@@ -100,10 +100,10 @@ decl_storage! {
     //   price has been inflated by 10,000, and in USD.
     //   When used, it should be divided by 10,000.
     // Using linked map for easy traversal from offchain worker or UI
-    TokenSrcPPMap: linked_map StrVecBytes => Vec<(T::Moment, u64)>;
+    TokenSrcPPMap: linked_map hasher(blake2_128_concat) StrVecBytes => Vec<(T::Moment, u64)>;
 
     // storage about aggregated price points (calculated with our logic)
-    TokenAggPPMap: linked_map StrVecBytes => (T::Moment, u64);
+    TokenAggPPMap: linked_map hasher(blake2_128_concat) StrVecBytes => (T::Moment, u64);
   }
 }
 
@@ -204,6 +204,14 @@ decl_module! {
 }
 
 impl<T: Trait> Module<T> {
+  pub fn get_price_for(symbol: &[u8]) -> Option<u64> {
+    let (_, price) = <TokenAggPPMap<T>>::get(symbol);
+    if price == Default::default() {
+      return None;
+    }
+    price.into()
+  }
+
   fn fetch_json<'a>(remote_url: &'a [u8]) -> Result<JsonValue> {
     let remote_url_str = core::str::from_utf8(remote_url)
       .map_err(|_| "Error in converting remote_url to string")?;
