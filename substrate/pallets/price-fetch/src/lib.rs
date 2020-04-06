@@ -17,7 +17,7 @@ mod tests;
 use rstd::{prelude::*};
 use primitives::crypto::KeyTypeId;
 use support::{decl_module, decl_storage, decl_event, dispatch,
-  debug, traits::Get};
+  debug, storage::IterableStorageMap, traits::Get};
 use system::offchain::{SubmitUnsignedTransaction};
 use system::{ensure_none};
 use simple_json::{self, json::JsonValue};
@@ -114,10 +114,10 @@ decl_storage! {
     //   price has been inflated by 10,000, and in USD.
     //   When used, it should be divided by 10,000.
     // Using linked map for easy traversal from offchain worker or UI
-    TokenSrcPPMap: linked_map hasher(blake2_128_concat) StrVecBytes => Vec<(T::Moment, u64)>;
+    TokenSrcPPMap: map hasher(blake2_128_concat) StrVecBytes => Vec<(T::Moment, u64)>;
 
     // storage about aggregated price points (calculated with our logic)
-    TokenAggPPMap: linked_map hasher(blake2_128_concat) StrVecBytes => (T::Moment, u64);
+    TokenAggPPMap: map hasher(blake2_128_concat) StrVecBytes => (T::Moment, u64);
   }
 }
 
@@ -203,7 +203,7 @@ decl_module! {
       }
 
       // Type II task: aggregate price
-      <TokenSrcPPMap<T>>::enumerate()
+      TokenSrcPPMap::<T>::iter()
         // filter those to be updated
         .filter(|(_, vec)| vec.len() > 0)
         .for_each(|(sym, _)| {
